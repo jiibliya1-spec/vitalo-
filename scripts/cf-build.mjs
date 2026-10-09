@@ -4,6 +4,7 @@
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
+console.log("cf-build: building Worker with OpenNext");
 execSync("npx opennextjs-cloudflare build", { stdio: "inherit" });
 
 const handler = ".open-next/server-functions/default/handler.mjs";
