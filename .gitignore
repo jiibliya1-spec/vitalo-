@@ -40,3 +40,8 @@ yarn-debug.log*
 next-env.d.ts
 
 !.env.example
+
+# OpenNext / Cloudflare
+.open-next
+.wrangler
+.dev.vars
