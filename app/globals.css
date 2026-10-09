@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0f2b3d;
+  --navy-2: #173b52;
+  --teal: #0b8f83;
+  --teal-dark: #086f66;
+  --teal-soft: #e3f4f1;
+  --bg: #f4f7f8;
+  --surface: #ffffff;
+  --line: #d9e2e6;
+  --ink: #14232c;
+  --muted: #5a6b75;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --warn: #9a5b00;
+  --warn-soft: #fff4e0;
+  --ok: #17663a;
+  --ok-soft: #e4f5ea;
+}
+
+@theme inline {
+  --color-navy: var(--navy);
+  --color-navy2: var(--navy-2);
+  --color-teal: var(--teal);
+  --color-tealdark: var(--teal-dark);
+  --color-tealsoft: var(--teal-soft);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-danger: var(--danger);
+  --color-dangersoft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warnsoft: var(--warn-soft);
+  --color-ok: var(--ok);
+  --color-oksoft: var(--ok-soft);
+  --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); }
+:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+dialog::backdrop { background: rgba(15, 43, 61, 0.45); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
