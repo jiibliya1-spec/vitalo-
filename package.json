@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/cf-build.mjs",
     "start": "next start",
     "lint": "eslint",
     "preview": "npm run cf-build && opennextjs-cloudflare preview",
     "deploy": "npm run cf-build && opennextjs-cloudflare deploy",
-    "cf-build": "node scripts/cf-build.mjs"
+    "cf-build": "node scripts/cf-build.mjs",
+    "build:next": "next build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
