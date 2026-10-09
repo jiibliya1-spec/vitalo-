@@ -19,13 +19,13 @@ const TABS = [
 ];
 const CLINICAL = ["pdl", "pflegefachkraft", "pflegehilfskraft", "auditor"];
 
-export default async function PatientPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
+export default async function PatientPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; q?: string; category?: string }> }) {
   const { denied, ctx } = await guard("patienten");
   if (denied) return denied;
   const { id } = await params;
-  const { tab: rawTab } = await searchParams;
-  const clinical = CLINICAL.includes(ctx.role);
-  const tabs = TABS.filter((t) => t.key === "uebersicht" || t.key === "aufgaben" || clinical).filter((t) => t.key !== "dokumente" || ["pdl", "pflegefachkraft", "auditor"].includes(ctx.role));
+  const { tab: rawTab, q, category } = await searchParams;
+  const clinical = ctx.roles.some((r) => CLINICAL.includes(r));
+  const tabs = TABS.filter((t) => t.key === "uebersicht" || t.key === "aufgaben" || clinical).filter((t) => t.key !== "dokumente" || ctx.roles.some((r) => ["pdl", "pflegefachkraft", "auditor"].includes(r)));
   const tab = tabs.find((t) => t.key === rawTab)?.key ?? "uebersicht";
 
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
@@ -72,7 +72,7 @@ export default async function PatientPage({ params, searchParams }: { params: Pr
         {tab === "planung" && (<><EntityList entityKey="sis_assessments" patientId={id} /><EntityList entityKey="care_plans" patientId={id} /></>)}
         {tab === "ereignisse" && <EntityList entityKey="incidents" patientId={id} />}
         {tab === "aufgaben" && (<><EntityList entityKey="tasks" patientId={id} /><EntityList entityKey="visits" patientId={id} /></>)}
-        {tab === "dokumente" && <DocumentsPanel patientId={id} />}
+        {tab === "dokumente" && <DocumentsPanel patientId={id} q={q} category={category} />}
       </div>
     </>
   );

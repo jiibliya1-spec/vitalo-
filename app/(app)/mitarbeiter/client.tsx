@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Copy, Trash2, UserPlus } from "lucide-react";
 import { Button, inputCls } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
-import { changeMemberRole, inviteMember, removeMember, revokeInvitation } from "@/app/actions/org";
-import { INVITABLE_ROLES, ROLE_LABEL, type Role } from "@/lib/permissions";
+import { changeMemberRole, inviteMember, removeMember, revokeInvitation, setOwnClinicalRole } from "@/app/actions/org";
+import { INVITABLE_ROLES, ROLE_LABEL, roleLabels, SELF_ASSIGNABLE_ROLES, type Role } from "@/lib/permissions";
 
 export function InviteForm() {
   const ref = useRef<HTMLFormElement>(null);
@@ -27,7 +27,8 @@ export function InviteForm() {
   );
 }
 
-export function MemberRow({ id, name, role, isSelf }: { id: string; name: string; role: string; isSelf: boolean }) {
+export function MemberRow({ id, name, roles, isSelf }: { id: string; name: string; roles: Role[]; isSelf: boolean }) {
+  const role = roles.includes("org_owner") ? "org_owner" : roles[0];
   const [pending, start] = useTransition();
   const toast = useToast();
   const router = useRouter();
@@ -36,7 +37,7 @@ export function MemberRow({ id, name, role, isSelf }: { id: string; name: string
     <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
       <div><div className="font-medium">{name}{isSelf && <span className="ml-2 text-xs text-muted">(Sie)</span>}</div></div>
       <div className="flex items-center gap-2">
-        {locked ? <span className="rounded-full bg-bg px-3 py-1 text-xs">{ROLE_LABEL[role as Role]}</span> : (
+        {locked ? <span className="rounded-full bg-bg px-3 py-1 text-xs">{roleLabels(roles)}</span> : (
           <>
             <label className="sr-only" htmlFor={`role-${id}`}>Rolle von {name}</label>
             <select id={`role-${id}`} disabled={pending} defaultValue={role} className={`${inputCls} !w-auto`} onChange={(e) => start(async () => {
@@ -69,5 +70,23 @@ export function InviteRow({ id, email, role, expires, tokenPath }: { id: string;
         <Button variant="secondary" loading={pending} onClick={() => start(async () => { const r = await revokeInvitation(id); toast(r.ok, r.message); router.refresh(); })}>Widerrufen</Button>
       </div>
     </li>
+  );
+}
+
+export function SelfRoles({ active }: { active: Role[] }) {
+  const [pending, start] = useTransition();
+  const toast = useToast();
+  const router = useRouter();
+  return (
+    <div className="flex flex-wrap gap-2">
+      {SELF_ASSIGNABLE_ROLES.map((r) => {
+        const on = active.includes(r);
+        return (
+          <Button key={r} variant={on ? "primary" : "secondary"} loading={pending} aria-pressed={on} onClick={() => start(async () => {
+            const res = await setOwnClinicalRole(r, !on); toast(res.ok, res.message); router.refresh();
+          })}>{on ? `${ROLE_LABEL[r]}: aktiv` : `Als ${ROLE_LABEL[r]} arbeiten`}</Button>
+        );
+      })}
+    </div>
   );
 }

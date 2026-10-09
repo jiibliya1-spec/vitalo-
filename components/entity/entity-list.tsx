@@ -20,9 +20,9 @@ export async function EntityList({
   extraFilter?: { column: string; value: string }; extraFixed?: Record<string, string>;
 }) {
   const entity = ENTITIES[entityKey];
-  const { orgId, role } = await getContext();
+  const { orgId, roles } = await getContext();
   const supabase = await createClient();
-  const canWrite = entity.writeRoles.includes(role);
+  const canWrite = roles.some((r) => entity.writeRoles.includes(r));
   const hasPatient = entity.fields.some((f) => f.name === "patient_id");
 
   let query = supabase.from(entity.table).select("*", { count: "exact" }).eq("organization_id", orgId)
@@ -128,7 +128,7 @@ export async function EntityList({
                         {canWrite && acts.length > 0 && (
                           <RowActions entityKey={entityKey} id={r.id as string} actions={acts.map(({ a, index }) => ({ index, label: a.label, icon: a.icon, confirm: a.confirm }))} />
                         )}
-                        {entity.correctable && canWrite && ["pdl", "pflegefachkraft"].includes(role) && (r.status === "final" || r.review_status === "abgeschlossen" || ["vital_signs", "medication_administrations"].includes(entityKey)) && (
+                        {entity.correctable && canWrite && roles.some((r) => ["pdl", "pflegefachkraft"].includes(r)) && (r.status === "final" || r.review_status === "abgeschlossen" || ["vital_signs", "medication_administrations"].includes(entityKey)) && (
                           <CorrectionButton table={entity.table} recordId={r.id as string} />
                         )}
                       </div>

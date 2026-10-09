@@ -9,9 +9,9 @@ import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/primitives"
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function Dashboard() {
-  const { orgId, role, org } = await getContext();
+  const { orgId, roles, org } = await getContext();
   const supabase = await createClient();
-  const clinical = ["pdl", "pflegefachkraft", "pflegehilfskraft", "auditor"].includes(role);
+  const clinical = roles.some((r) => ["pdl", "pflegefachkraft", "pflegehilfskraft", "auditor"].includes(r));
   const now = new Date();
   const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);

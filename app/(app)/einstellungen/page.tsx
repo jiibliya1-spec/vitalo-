@@ -11,7 +11,7 @@ export default async function Page() {
   const { denied, ctx } = await guard("einstellungen");
   if (denied) return denied;
   const supabase = await createClient();
-  const isManager = ["org_owner", "org_admin"].includes(ctx.role);
+  const isManager = ctx.roles.some((r) => ["org_owner", "org_admin"].includes(r));
   const [{ data: org }, { data: locs }, { data: th }, { data: sub }] = await Promise.all([
     supabase.from("organizations").select("name, org_type").eq("id", ctx.orgId).single(),
     supabase.from("care_locations").select("id, name, kind").eq("organization_id", ctx.orgId).eq("archived", false).order("name"),

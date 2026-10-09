@@ -6,7 +6,7 @@ import { EmptyState, Card } from "@/components/ui/primitives";
 /** Returns the context if the active role may open the area, otherwise a permission-denied element. */
 export async function guard(area: string) {
   const ctx = await getContext();
-  if (canAccess(area, ctx.role)) return { ctx, denied: null as React.ReactNode };
+  if (canAccess(area, ctx.roles)) return { ctx, denied: null as React.ReactNode };
   return {
     ctx,
     denied: (

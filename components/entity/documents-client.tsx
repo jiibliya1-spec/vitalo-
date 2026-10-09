@@ -6,6 +6,7 @@ import { Download, Upload } from "lucide-react";
 import { Button, inputCls } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { getDocumentUrl, uploadDocument } from "@/app/actions/documents";
+import { DOCUMENT_CATEGORIES } from "@/lib/document-categories";
 
 export function DownloadButton({ id }: { id: string }) {
   const [pending, start] = useTransition();
@@ -47,12 +48,13 @@ export function UploadForm({ patientId, patients }: { patientId?: string; patien
       <div>
         <label htmlFor="up-cat" className="mb-1 block text-xs font-medium">Kategorie</label>
         <select id="up-cat" name="category" className={inputCls} defaultValue="sonstiges">
-          <option value="arztbrief">Arztbrief</option><option value="vertrag">Vertrag</option><option value="wunde">Wundfoto</option><option value="sonstiges">Sonstiges</option>
+          {DOCUMENT_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
         </select>
       </div>
       <div>
         <label htmlFor="up-file" className="mb-1 block text-xs font-medium">Datei (PDF, JPEG, PNG, max. 10 MB)</label>
         <input id="up-file" name="file" type="file" required accept="application/pdf,image/jpeg,image/png" className={inputCls} />
+        <p className="mt-1 text-xs text-muted">Am Smartphone kann direkt ein Foto aufgenommen werden (Papier abfotografieren).</p>
       </div>
       <Button type="submit" loading={pending}><Upload size={15} aria-hidden /> Hochladen</Button>
     </form>

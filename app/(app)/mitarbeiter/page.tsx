@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { loadMembers } from "@/lib/options";
 import { fmtDateTime } from "@/lib/format";
 import { Card, PageHeader } from "@/components/ui/primitives";
-import { InviteForm, InviteRow, MemberRow } from "./client";
+import { InviteForm, InviteRow, MemberRow, SelfRoles } from "./client";
+import type { Role } from "@/lib/permissions";
 
 export const metadata: Metadata = { title: "Mitarbeiter" };
 
@@ -18,16 +19,30 @@ export default async function Page() {
   ]);
   const { data: rows } = await supabase.from("organization_members").select("id, user_id, role").eq("organization_id", ctx.orgId);
   const name = new Map(members.map((m) => [m.id, m.name]));
+  const grouped = new Map<string, { id: string; user_id: string; roles: Role[] }>();
+  for (const m of rows ?? []) {
+    const g = grouped.get(m.user_id) ?? { id: m.id, user_id: m.user_id, roles: [] as Role[] };
+    g.roles.push(m.role as Role);
+    grouped.set(m.user_id, g);
+  }
+  const own = grouped.get(ctx.user.id)?.roles ?? [];
   return (
     <>
       <PageHeader title="Mitarbeiter" description="Zugänge und Rollen verwalten. Änderungen wirken sofort." />
       <div className="grid gap-6">
         <Card className="p-4"><h2 className="mb-3 font-semibold text-navy">Person einladen</h2><InviteForm /></Card>
+        {own.includes("org_owner") && (
+          <Card className="p-4">
+            <h2 className="mb-1 font-semibold text-navy">Meine Fachrolle</h2>
+            <p className="mb-3 text-sm text-muted">Pflege- und Patientendaten sind aus Datenschutzgründen nur für Fachrollen sichtbar. Arbeiten Sie selbst als Pflegedienstleitung oder Pflegefachkraft, aktivieren Sie die Rolle hier zusätzlich zur Inhaberrolle.</p>
+            <SelfRoles active={own} />
+          </Card>
+        )}
         <Card>
           <h2 className="border-b border-line px-4 py-3 font-semibold text-navy">Mitglieder</h2>
           <ul className="divide-y divide-line">
-            {(rows ?? []).map((m) => (
-              <MemberRow key={m.id} id={m.id} name={name.get(m.user_id) ?? "Unbekannt"} role={m.role} isSelf={m.user_id === ctx.user.id} />
+            {[...grouped.values()].map((m) => (
+              <MemberRow key={m.user_id} id={m.id} name={name.get(m.user_id) ?? "Unbekannt"} roles={m.roles} isSelf={m.user_id === ctx.user.id} />
             ))}
           </ul>
         </Card>
