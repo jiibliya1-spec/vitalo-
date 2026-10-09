@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireWriteContext } from "@/lib/context";
+import { hasAnyRole } from "@/lib/permissions";
+import { DOCUMENT_CATEGORY_KEYS } from "@/lib/document-categories";
 import { safeFilename } from "@/lib/format";
 import type { ActionResult } from "./records";
 
@@ -19,10 +21,10 @@ function sniff(buf: Uint8Array, mime: string) {
 }
 
 export async function uploadDocument(formData: FormData): Promise<ActionResult> {
-  const { supabase, orgId, role, user } = await requireWriteContext();
-  if (!UPLOAD_ROLES.includes(role)) return { ok: false, message: "Keine Berechtigung zum Hochladen." };
+  const { supabase, orgId, roles, user } = await requireWriteContext();
+  if (!hasAnyRole(roles, UPLOAD_ROLES)) return { ok: false, message: "Keine Berechtigung zum Hochladen." };
   const meta = z
-    .object({ patient_id: z.string().uuid("Patient auswählen"), category: z.enum(["arztbrief", "vertrag", "wunde", "sonstiges"]) })
+    .object({ patient_id: z.string().uuid("Patient auswählen"), category: z.enum(DOCUMENT_CATEGORY_KEYS) })
     .safeParse(Object.fromEntries(formData));
   const file = formData.get("file");
   if (!meta.success) return { ok: false, message: meta.error.issues[0].message };

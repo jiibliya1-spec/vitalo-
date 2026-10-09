@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getContext, getMemberships, getUser, ORG_COOKIE } from "@/lib/context";
 import { createClient } from "@/lib/supabase/server";
-import { INVITABLE_ROLES } from "@/lib/permissions";
+import { hasAnyRole, INVITABLE_ROLES, SELF_ASSIGNABLE_ROLES } from "@/lib/permissions";
 import type { ActionResult } from "./records";
 
 const MANAGERS = ["org_owner", "org_admin"];
@@ -42,8 +42,8 @@ export async function acceptInvitation(token: string): Promise<ActionResult> {
 }
 
 export async function inviteMember(formData: FormData): Promise<ActionResult> {
-  const { orgId, role, user } = await getContext();
-  if (!MANAGERS.includes(role)) return { ok: false, message: "Keine Berechtigung." };
+  const { orgId, roles, user } = await getContext();
+  if (!hasAnyRole(roles, MANAGERS)) return { ok: false, message: "Keine Berechtigung." };
   const parsed = z
     .object({ email: z.string().trim().toLowerCase().email("Gültige E-Mail erforderlich"), role: z.enum(INVITABLE_ROLES as [string, ...string[]]) })
     .safeParse(Object.fromEntries(formData));
@@ -56,8 +56,8 @@ export async function inviteMember(formData: FormData): Promise<ActionResult> {
 }
 
 export async function revokeInvitation(id: string): Promise<ActionResult> {
-  const { orgId, role } = await getContext();
-  if (!MANAGERS.includes(role) || !uuid.safeParse(id).success) return { ok: false, message: "Keine Berechtigung." };
+  const { orgId, roles } = await getContext();
+  if (!hasAnyRole(roles, MANAGERS) || !uuid.safeParse(id).success) return { ok: false, message: "Keine Berechtigung." };
   const supabase = await createClient();
   const { error } = await supabase.from("invitations").update({ status: "revoked" }).eq("id", id).eq("organization_id", orgId);
   if (error) return { ok: false, message: "Einladung konnte nicht widerrufen werden." };
@@ -66,8 +66,8 @@ export async function revokeInvitation(id: string): Promise<ActionResult> {
 }
 
 export async function changeMemberRole(memberId: string, newRole: string): Promise<ActionResult> {
-  const { orgId, role } = await getContext();
-  if (!MANAGERS.includes(role) || !uuid.safeParse(memberId).success || !INVITABLE_ROLES.includes(newRole as never))
+  const { orgId, roles } = await getContext();
+  if (!hasAnyRole(roles, MANAGERS) || !uuid.safeParse(memberId).success || !INVITABLE_ROLES.includes(newRole as never))
     return { ok: false, message: "Keine Berechtigung." };
   const supabase = await createClient();
   const { data, error } = await supabase.from("organization_members").update({ role: newRole }).eq("id", memberId).eq("organization_id", orgId).select("id");
@@ -77,8 +77,8 @@ export async function changeMemberRole(memberId: string, newRole: string): Promi
 }
 
 export async function removeMember(memberId: string): Promise<ActionResult> {
-  const { orgId, role } = await getContext();
-  if (!MANAGERS.includes(role) || !uuid.safeParse(memberId).success) return { ok: false, message: "Keine Berechtigung." };
+  const { orgId, roles } = await getContext();
+  if (!hasAnyRole(roles, MANAGERS) || !uuid.safeParse(memberId).success) return { ok: false, message: "Keine Berechtigung." };
   const supabase = await createClient();
   const { data, error } = await supabase.from("organization_members").delete().eq("id", memberId).eq("organization_id", orgId).select("id");
   if (error || !data?.length) return { ok: false, message: "Mitglied konnte nicht entfernt werden (Inhaber und eigener Zugang sind geschützt)." };
@@ -87,8 +87,8 @@ export async function removeMember(memberId: string): Promise<ActionResult> {
 }
 
 export async function updateOrganization(formData: FormData): Promise<ActionResult> {
-  const { orgId, role } = await getContext();
-  if (!MANAGERS.includes(role)) return { ok: false, message: "Keine Berechtigung." };
+  const { orgId, roles } = await getContext();
+  if (!hasAnyRole(roles, MANAGERS)) return { ok: false, message: "Keine Berechtigung." };
   const parsed = z
     .object({ name: z.string().trim().min(2, "Name erforderlich").max(120), org_type: z.enum(["stationaer", "ambulant", "aki", "gemischt"]) })
     .safeParse(Object.fromEntries(formData));
@@ -101,8 +101,8 @@ export async function updateOrganization(formData: FormData): Promise<ActionResu
 }
 
 export async function createLocation(formData: FormData): Promise<ActionResult> {
-  const { orgId, role, user } = await getContext();
-  if (!MANAGERS.includes(role)) return { ok: false, message: "Keine Berechtigung." };
+  const { orgId, roles, user } = await getContext();
+  if (!hasAnyRole(roles, MANAGERS)) return { ok: false, message: "Keine Berechtigung." };
   const parsed = z
     .object({ name: z.string().trim().min(1, "Name erforderlich").max(120), kind: z.enum(["wohnbereich", "standort", "tour", "intensiv"]) })
     .safeParse(Object.fromEntries(formData));
@@ -115,8 +115,8 @@ export async function createLocation(formData: FormData): Promise<ActionResult> 
 }
 
 export async function saveThreshold(formData: FormData): Promise<ActionResult> {
-  const { orgId, role, user } = await getContext();
-  if (!["org_owner", "org_admin", "pdl"].includes(role)) return { ok: false, message: "Keine Berechtigung." };
+  const { orgId, roles, user } = await getContext();
+  if (!hasAnyRole(roles, ["org_owner", "org_admin", "pdl"])) return { ok: false, message: "Keine Berechtigung." };
   const num = z.preprocess((v) => (v === "" || v === null ? null : Number(v)), z.number().nullable());
   const parsed = z
     .object({ kind: z.enum(["blutdruck", "puls", "temperatur", "spo2", "atemfrequenz", "gewicht", "blutzucker"]), min_value: num, max_value: num })
@@ -131,4 +131,16 @@ export async function saveThreshold(formData: FormData): Promise<ActionResult> {
   if (error) return { ok: false, message: "Grenzwert konnte nicht gespeichert werden." };
   revalidatePath("/einstellungen");
   return { ok: true, message: "Prüfgrenze gespeichert. Gilt für neue Messwerte." };
+}
+
+/** Lets the organization owner take on (or drop) a clinical role for themselves, e.g. as Pflegedienstleitung. */
+export async function setOwnClinicalRole(role: string, enabled: boolean): Promise<ActionResult> {
+  const { orgId, roles } = await getContext();
+  if (!roles.includes("org_owner")) return { ok: false, message: "Nur die Inhaberin oder der Inhaber kann das ändern." };
+  if (!SELF_ASSIGNABLE_ROLES.includes(role as never)) return { ok: false, message: "Ungültige Rolle." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc(enabled ? "add_own_role" : "remove_own_role", { p_org: orgId, p_role: role });
+  if (error) return { ok: false, message: "Rolle konnte nicht geändert werden. Wurde die Datenbank-Migration 004 eingespielt?" };
+  revalidatePath("/", "layout");
+  return { ok: true, message: enabled ? "Rolle hinzugefügt. Die klinischen Bereiche sind jetzt sichtbar." : "Rolle entfernt." };
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireWriteContext } from "@/lib/context";
 import { ENTITIES, VITAL_LIMITS, type Field } from "@/lib/entities";
+import { hasAnyRole } from "@/lib/permissions";
 
 export type ActionResult = { ok: boolean; message: string; fieldErrors?: Record<string, string> };
 
@@ -47,8 +48,8 @@ function fieldSchema(f: Field): z.ZodType {
 export async function createRecord(entityKey: string, formData: FormData): Promise<ActionResult> {
   const entity = ENTITIES[entityKey];
   if (!entity) return { ok: false, message: "Unbekannter Bereich." };
-  const { supabase, orgId, role, user } = await requireWriteContext();
-  if (!entity.writeRoles.includes(role)) return { ok: false, message: "Für diese Aktion fehlt Ihnen die Berechtigung." };
+  const { supabase, orgId, roles, user } = await requireWriteContext();
+  if (!hasAnyRole(roles, entity.writeRoles)) return { ok: false, message: "Für diese Aktion fehlt Ihnen die Berechtigung." };
 
   const values: Record<string, unknown> = {};
   const errors: Record<string, string> = {};
@@ -98,8 +99,8 @@ export async function runRowAction(entityKey: string, id: string, actionIndex: n
   const entity = ENTITIES[entityKey];
   const action = entity?.actions?.[actionIndex];
   if (!entity || !action || !uuid.safeParse(id).success) return { ok: false, message: "Ungültige Aktion." };
-  const { supabase, orgId, role } = await requireWriteContext();
-  if (!entity.writeRoles.includes(role)) return { ok: false, message: "Für diese Aktion fehlt Ihnen die Berechtigung." };
+  const { supabase, orgId, roles } = await requireWriteContext();
+  if (!hasAnyRole(roles, entity.writeRoles)) return { ok: false, message: "Für diese Aktion fehlt Ihnen die Berechtigung." };
   const patch = Object.fromEntries(Object.entries(action.patch).map(([k, v]) => [k, v === "$now" ? new Date().toISOString() : v]));
   const { data, error } = await supabase.from(entity.table).update(patch).eq("id", id).eq("organization_id", orgId).select("id");
   if (error) return { ok: false, message: friendlyError(error.message, error.code) };
@@ -116,8 +117,8 @@ const correctionSchema = z.object({
 });
 
 export async function createCorrection(formData: FormData): Promise<ActionResult> {
-  const { supabase, orgId, role, user } = await requireWriteContext();
-  if (!["pdl", "pflegefachkraft"].includes(role)) return { ok: false, message: "Für Korrekturen fehlt Ihnen die Berechtigung." };
+  const { supabase, orgId, roles, user } = await requireWriteContext();
+  if (!hasAnyRole(roles, ["pdl", "pflegefachkraft"])) return { ok: false, message: "Für Korrekturen fehlt Ihnen die Berechtigung." };
   const parsed = correctionSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};

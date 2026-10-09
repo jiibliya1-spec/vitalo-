@@ -3,7 +3,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Role } from "@/lib/permissions";
+import { ROLE_PRIORITY, type Role } from "@/lib/permissions";
 
 export type Membership = { organization_id: string; role: Role; organizations: { id: string; name: string; org_type: string } };
 export const ORG_COOKIE = "vitalo_org";
@@ -34,7 +34,10 @@ export const getContext = cache(async () => {
   if (memberships.length === 0) redirect("/onboarding");
   const wanted = (await cookies()).get(ORG_COOKIE)?.value;
   const active = memberships.find((m) => m.organization_id === wanted) ?? memberships[0];
-  return { user, memberships, orgId: active.organization_id, org: active.organizations, role: active.role };
+  const roles = memberships.filter((m) => m.organization_id === active.organization_id).map((m) => m.role);
+  const role = ROLE_PRIORITY.find((r) => roles.includes(r)) ?? active.role;
+  const orgs = [...new Map(memberships.map((m) => [m.organization_id, m.organizations])).values()];
+  return { user, memberships, orgs, orgId: active.organization_id, org: active.organizations, role, roles };
 });
 
 export async function requireWriteContext() {
