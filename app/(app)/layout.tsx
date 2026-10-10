@@ -5,7 +5,7 @@ import { AppShell, type NavItem } from "@/components/shell/app-shell";
 
 const LABELS: Record<string, string> = {
   dashboard: "Dashboard", patienten: "Patienten", pflegeplanung: "Pflegeplanung", pflegeberichte: "Pflegeberichte", vitalwerte: "Vitalwerte",
-  medikation: "Medikation", wunden: "Wunden", ereignisse: "Ereignisse", aufgaben: "Aufgaben", besuche: "Touren & Besuche",
+  medikation: "Medikation", wunden: "Wunden", verordnungen: "Verordnungen", stammdaten: "Leistungen & Kostenträger", ereignisse: "Ereignisse", aufgaben: "Aufgaben", besuche: "Touren & Besuche",
   dienstplanung: "Dienstplanung", dokumente: "Dokumente", berichte: "Auswertungen", abrechnung: "Abrechnung", mitarbeiter: "Mitarbeiter", einstellungen: "Einstellungen",
 };
 
