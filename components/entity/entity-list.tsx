@@ -8,6 +8,7 @@ import { fmtDate, fmtDateTime, fmtEur, fullName } from "@/lib/format";
 import { Badge, Card, EmptyState } from "@/components/ui/primitives";
 import { CorrectionButton, EntityForm } from "./entity-form";
 import { RowActions } from "./row-actions";
+import { LiveTimer } from "./live-timer";
 
 const PAGE = 25;
 const nowMs = () => Date.now();
@@ -71,6 +72,13 @@ export async function EntityList({
     if (col.key === "display") {
       const unit = VITAL_UNITS[String(r.kind)] ?? "";
       return r.kind === "blutdruck" ? `${r.value}/${r.value2} ${unit}` : `${r.value} ${unit}`;
+    }
+    if (col.key === "dauer") {
+      if (r.started_at && r.ended_at) {
+        const min = Math.max(1, Math.round((Date.parse(r.ended_at as string) - Date.parse(r.started_at as string)) / 60000));
+        return `${min} Min.`;
+      }
+      return r.started_at && r.status === "begonnen" ? <LiveTimer startedAt={r.started_at as string} /> : "–";
     }
     if (col.key === "medication_id") return medName.get(v as string) ?? "–";
     if (col.key === "payer_id") return payerName.get(v as string) ?? "–";
