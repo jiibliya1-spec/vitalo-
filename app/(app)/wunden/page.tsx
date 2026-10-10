@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { hasAnyRole } from "@/lib/permissions";
 import { guard } from "@/components/shell/guard";
 import { PageHeader } from "@/components/ui/primitives";
+import { DocumentsPanel } from "@/components/entity/documents-panel";
 import { EntityList } from "@/components/entity/entity-list";
 
 export const metadata: Metadata = { title: "Wunden" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const { denied } = await guard("wunden");
+  const { denied, ctx } = await guard("wunden");
   if (denied) return denied;
   const { page } = await searchParams;
   const p = Math.max(1, Number(page) || 1);
@@ -16,6 +18,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
       <div className="grid gap-6">
         <EntityList entityKey="wounds" page={p} />
         <EntityList entityKey="wound_assessments" />
+        {hasAnyRole(ctx.roles, ["pdl", "pflegefachkraft", "auditor"]) && <DocumentsPanel category="wunde" />}
       </div>
     </>
   );

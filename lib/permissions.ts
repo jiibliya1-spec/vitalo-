@@ -29,6 +29,7 @@ export const NAV_ACCESS: Record<string, Role[]> = {
   besuche: MGMT,
   dienstplanung: MGMT,
   dokumente: ["pdl", "pflegefachkraft", "auditor"],
+  berichte: ["pdl", "auditor"],
   abrechnung: ["org_owner", "org_admin", "pdl", "auditor"],
   mitarbeiter: ["org_owner", "org_admin"],
   einstellungen: ["org_owner", "org_admin", "pdl"],
