@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   LayoutDashboard, Users, ClipboardList, FileText, HeartPulse, Pill, Bandage, TriangleAlert, ListChecks,
-  CalendarClock, CalendarDays, FolderLock, Receipt, UserCog, Settings, Menu, X, LogOut, Building2, ChevronDown,
+  CalendarClock, CalendarDays, FolderLock, Receipt, ChartColumn, UserCog, Settings, Menu, X, LogOut, Building2, ChevronDown,
 } from "lucide-react";
 import { Wordmark } from "@/components/ui/primitives";
 import { signOut } from "@/app/actions/auth";
@@ -14,7 +14,7 @@ import { switchOrganization } from "@/app/actions/org";
 const ICONS = {
   dashboard: LayoutDashboard, patienten: Users, pflegeplanung: ClipboardList, pflegeberichte: FileText, vitalwerte: HeartPulse,
   medikation: Pill, wunden: Bandage, ereignisse: TriangleAlert, aufgaben: ListChecks, besuche: CalendarClock,
-  dienstplanung: CalendarDays, dokumente: FolderLock, abrechnung: Receipt, mitarbeiter: UserCog, einstellungen: Settings,
+  dienstplanung: CalendarDays, dokumente: FolderLock, berichte: ChartColumn, abrechnung: Receipt, mitarbeiter: UserCog, einstellungen: Settings,
 };
 export type NavItem = { key: keyof typeof ICONS; label: string };
 

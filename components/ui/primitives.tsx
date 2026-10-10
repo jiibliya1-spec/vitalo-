@@ -24,11 +24,11 @@ const tones: Record<string, string> = {
 const TONE: Record<string, string> = {
   aktiv: "ok", erledigt: "ok", abgeschlossen: "ok", final: "ok", gegeben: "ok", abgeheilt: "neutral", entlassen: "neutral",
   draft: "warn", offen: "warn", geplant: "info", begonnen: "info", in_pruefung: "warn", pruefung: "warn", aufnahme_geplant: "info", hoch: "danger", verweigert: "danger", ausgelassen: "warn", storniert: "neutral", ausgefallen: "neutral",
-  besonderes_vorkommnis: "warn",
+  besonderes_vorkommnis: "warn", btm: "danger", bedarf: "info", regulaer: "neutral",
 };
 export const LABELS: Record<string, string> = {
   draft: "Entwurf", final: "Final", in_pruefung: "In Prüfung", pruefung: "Zur Prüfung", aufnahme_geplant: "Aufnahme geplant", besonderes_vorkommnis: "Besonderes Vorkommnis",
-  frueh: "Frühdienst", spaet: "Spätdienst", nacht: "Nachtdienst", tag: "Tagdienst", spo2: "SpO2", massnahme: "Maßnahme",
+  regulaer: "Regelmedikation", bedarf: "Bedarf", btm: "BtM", frueh: "Frühdienst", spaet: "Spätdienst", nacht: "Nachtdienst", tag: "Tagdienst", spo2: "SpO2", massnahme: "Maßnahme",
 };
 export function Badge({ value, tone }: { value: string; tone?: string }) {
   const label = LABELS[value] ?? value.charAt(0).toUpperCase() + value.slice(1).replaceAll("_", " ");
