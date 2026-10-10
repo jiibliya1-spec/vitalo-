@@ -1,6 +1,7 @@
 const dt = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" });
 const d = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeZone: "Europe/Berlin" });
 
+export const fmtEur = (euro: number) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(euro);
 export const fmtDateTime = (v?: string | null) => (v ? dt.format(new Date(v)) : "–");
 export const fmtDate = (v?: string | null) => (v ? d.format(new Date(v.length === 10 ? v + "T12:00:00" : v)) : "–");
 export const fullName = (p?: { first_name: string; last_name: string } | null) =>

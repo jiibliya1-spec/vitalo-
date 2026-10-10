@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Field, Opt } from "@/lib/entities";
-import { fmtDateTime } from "@/lib/format";
+import { fmtDateTime, fmtEur } from "@/lib/format";
 
 export type OptionSets = Partial<Record<Field["type"], Opt[]>>;
 
@@ -44,6 +44,12 @@ export async function loadOptions(supabase: SupabaseClient, orgId: string, field
   if (types.has("sis"))
     jobs.push(supabase.from("sis_assessments").select("id, assessed_at").eq("organization_id", orgId).order("assessed_at", { ascending: false }).limit(300)
       .then(({ data }) => { out.sis = (data ?? []).map((s) => ({ value: s.id, label: `SIS vom ${fmtDateTime(s.assessed_at)}` })); }));
+  if (types.has("payer"))
+    jobs.push(supabase.from("payers").select("id, name").eq("organization_id", orgId).eq("active", true).order("name").limit(300)
+      .then(({ data }) => { out.payer = (data ?? []).map((x) => ({ value: x.id, label: x.name })); }));
+  if (types.has("catalog"))
+    jobs.push(supabase.from("service_catalog").select("id, code, name, price_cents, billing_unit").eq("organization_id", orgId).eq("active", true).order("code").limit(500)
+      .then(({ data }) => { out.catalog = (data ?? []).map((x) => ({ value: x.id, label: `${x.code} – ${x.name} (${fmtEur(x.price_cents / 100)}${x.billing_unit === "pro_minute" ? "/Min." : ""})` })); }));
   await Promise.all(jobs);
   return out;
 }
