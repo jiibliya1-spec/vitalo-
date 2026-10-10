@@ -40,7 +40,7 @@ function fieldSchema(f: Field): z.ZodType {
       s = z.boolean();
       break;
     default:
-      s = uuid; // patient, member, location, medication, wound, visit, careplan, sis
+      s = uuid; // patient, member, location, medication, wound, visit, careplan, sis, payer, catalog
   }
   return s;
 }
@@ -78,6 +78,10 @@ export async function createRecord(entityKey: string, formData: FormData): Promi
     if (kind === "blutdruck" && !check(values.value2)) errors.value2 = "Diastolischer Wert erforderlich und plausibel";
     if (kind !== "blutdruck") values.value2 = null;
   }
+  if (typeof values.valid_from === "string" && typeof values.valid_to === "string" && values.valid_to < values.valid_from)
+    errors.valid_to = "Ende darf nicht vor dem Beginn liegen";
+  if (entityKey === "service_records" && !values.service && !values.catalog_id)
+    errors.catalog_id = "Bitte eine Katalogleistung wählen oder eine Freitext-Leistung eingeben";
   if (typeof values.planned_start === "string" && typeof values.planned_end === "string" && values.planned_end <= values.planned_start)
     errors.planned_end = "Ende muss nach dem Beginn liegen";
   if (typeof values.starts_at === "string" && typeof values.ends_at === "string" && values.ends_at <= values.starts_at)

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getContext } from "@/lib/context";
 import { ENTITIES, VITAL_UNITS, type Column } from "@/lib/entities";
 import { loadMembers, loadOptions } from "@/lib/options";
-import { fmtDate, fmtDateTime, fullName } from "@/lib/format";
+import { fmtDate, fmtDateTime, fmtEur, fullName } from "@/lib/format";
 import { Badge, Card, EmptyState } from "@/components/ui/primitives";
 import { CorrectionButton, EntityForm } from "./entity-form";
 import { RowActions } from "./row-actions";
@@ -45,15 +45,18 @@ export async function EntityList({
   const memberName = new Map(members.map((m) => [m.id, m.name]));
 
   const patientIds = [...new Set(rows.map((r) => r.patient_id as string).filter(Boolean))];
+  const payerIds = [...new Set(rows.map((r) => r.payer_id as string).filter(Boolean))];
   const medIds = [...new Set(rows.map((r) => r.medication_id as string).filter(Boolean))];
   const ids = rows.map((r) => r.id as string);
-  const [pat, med, cor] = await Promise.all([
+  const [pat, med, cor, pay] = await Promise.all([
     patientIds.length ? supabase.from("patients").select("id, first_name, last_name").in("id", patientIds) : Promise.resolve({ data: [] }),
     medIds.length ? supabase.from("medication_records").select("id, name, dosage").in("id", medIds) : Promise.resolve({ data: [] }),
     entity.correctable && ids.length
       ? supabase.from("record_corrections").select("id, record_id, reason, corrected_content, created_by, created_at").eq("table_name", entity.table).in("record_id", ids).order("created_at")
       : Promise.resolve({ data: [] }),
+    payerIds.length ? supabase.from("payers").select("id, name").in("id", payerIds) : Promise.resolve({ data: [] }),
   ]);
+  const payerName = new Map((pay.data ?? []).map((p) => [p.id as string, p.name as string]));
   const patientName = new Map((pat.data ?? []).map((p) => [p.id as string, fullName(p as never)]));
   const medName = new Map((med.data ?? []).map((m) => [m.id as string, `${m.name} (${m.dosage})`]));
   const corrections = new Map<string, Row[]>();
@@ -70,7 +73,13 @@ export async function EntityList({
       return r.kind === "blutdruck" ? `${r.value}/${r.value2} ${unit}` : `${r.value} ${unit}`;
     }
     if (col.key === "medication_id") return medName.get(v as string) ?? "–";
+    if (col.key === "payer_id") return payerName.get(v as string) ?? "–";
+    if (entityKey === "prescriptions" && col.key === "valid_to" && v) {
+      const days = (new Date(`${v}T23:59:59`).getTime() - now) / 86400000;
+      return <>{fmtDate(v as string)}{r.status === "aktiv" && days < 0 ? <span className="ml-2"><Badge value="abgelaufen" /></span> : r.status === "aktiv" && days <= 14 ? <span className="ml-2"><Badge value="bald_faellig" /></span> : null}</>;
+    }
     switch (col.type) {
+      case "money": return v === null || v === undefined ? "–" : fmtEur(Number(v) / 100);
       case "datetime": return fmtDateTime(v as string);
       case "date": return fmtDate(v as string);
       case "badge": return v ? <Badge value={String(v)} /> : "–";

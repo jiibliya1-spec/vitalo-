@@ -3,7 +3,7 @@ import type { Role } from "@/lib/permissions";
 export type Opt = { value: string; label: string };
 export type FieldType =
   | "text" | "textarea" | "number" | "date" | "datetime" | "select" | "checkbox"
-  | "patient" | "member" | "location" | "medication" | "wound" | "visit" | "careplan" | "sis";
+  | "patient" | "member" | "location" | "medication" | "wound" | "visit" | "careplan" | "sis" | "payer" | "catalog";
 
 export type Field = {
   name: string;
@@ -18,7 +18,7 @@ export type Field = {
   hint?: string;
 };
 
-export type ColType = "text" | "datetime" | "date" | "badge" | "patient" | "member" | "bool" | "wrap";
+export type ColType = "text" | "datetime" | "date" | "badge" | "patient" | "member" | "bool" | "wrap" | "money";
 export type Column = { key: string; label: string; type?: ColType };
 
 export type RowAction = {
@@ -313,15 +313,78 @@ export const ENTITIES: Record<string, Entity> = {
     ],
   },
   service_records: {
-    table: "service_records", title: "Leistungsnachweise", singular: "Leistung", description: "Erbrachte Leistungen je Besuch.",
+    table: "service_records", title: "Leistungsnachweise", singular: "Leistung", description: "Erbrachte Leistungen je Besuch. Bei Auswahl aus dem Katalog wird der Preis automatisch übernommen.",
     writeRoles: ["org_owner", "org_admin", "pdl", "pflegefachkraft", "pflegehilfskraft"], order: { column: "created_at", ascending: false },
     empty: "Keine Leistungen erfasst.",
     fields: [
       { name: "visit_id", label: "Besuch", type: "visit", required: true },
-      { name: "service", label: "Leistung", type: "text", required: true, max: 200 },
+      { name: "catalog_id", label: "Leistung aus Katalog (Preis wird übernommen)", type: "catalog" },
+      { name: "service", label: "Freitext-Leistung (falls nicht im Katalog)", type: "text", max: 200 },
       { name: "duration_min", label: "Dauer (Minuten)", type: "number", min: 1, step: 1 },
     ],
-    columns: [{ key: "created_at", label: "Erfasst", type: "datetime" }, { key: "service", label: "Leistung" }, { key: "duration_min", label: "Minuten" }, { key: "created_by", label: "Von", type: "member" }],
+    columns: [{ key: "created_at", label: "Erfasst", type: "datetime" }, { key: "service", label: "Leistung" }, { key: "duration_min", label: "Minuten" }, { key: "amount_cents", label: "Betrag", type: "money" }, { key: "created_by", label: "Von", type: "member" }],
+  },
+  payers: {
+    table: "payers", title: "Kostenträger", singular: "Kostenträger", description: "Pflegekassen, Krankenkassen, Sozialämter und Selbstzahler, mit denen Sie abrechnen.",
+    writeRoles: ["org_owner", "org_admin", "pdl"], order: { column: "name", ascending: true },
+    empty: "Noch keine Kostenträger angelegt.",
+    fields: [
+      { name: "name", label: "Name", type: "text", required: true, max: 160 },
+      { name: "payer_type", label: "Art", type: "select", required: true, options: o(["pflegekasse", "Pflegekasse"], ["krankenkasse", "Krankenkasse"], ["sozialamt", "Sozialamt"], ["selbstzahler", "Selbstzahler"], ["sonstige", "Sonstige"]) },
+      { name: "ik_number", label: "Institutionskennzeichen (IK)", type: "text", max: 20 },
+    ],
+    columns: [{ key: "name", label: "Name" }, { key: "payer_type", label: "Art", type: "badge" }, { key: "ik_number", label: "IK" }, { key: "active", label: "Aktiv", type: "bool" }],
+    actions: [
+      { label: "Deaktivieren", icon: "archive", patch: { active: false }, when: (r) => r.active === true, confirm: "Kostenträger deaktivieren? Bestehende Zuordnungen bleiben erhalten." },
+      { label: "Aktivieren", icon: "play", patch: { active: true }, when: (r) => r.active === false },
+    ],
+  },
+  service_catalog: {
+    table: "service_catalog", title: "Leistungskatalog", singular: "Leistung", description: "Leistungen mit Preis. Der Preis wird beim Erfassen einer Leistung festgehalten; spätere Preisänderungen wirken nicht rückwirkend.",
+    writeRoles: ["org_owner", "org_admin", "pdl"], order: { column: "code", ascending: true },
+    empty: "Noch keine Leistungen im Katalog.",
+    fields: [
+      { name: "code", label: "Kürzel / Leistungsnummer", type: "text", required: true, max: 40 },
+      { name: "name", label: "Bezeichnung", type: "text", required: true, max: 200 },
+      { name: "billing_unit", label: "Abrechnung", type: "select", required: true, options: o(["pro_einsatz", "Pro Einsatz"], ["pro_minute", "Pro Minute"], ["pauschale", "Pauschale"]) },
+      { name: "price_eur", label: "Preis in Euro", type: "number", required: true, min: 0, step: 0.01 },
+      { name: "default_duration_min", label: "Standarddauer (Minuten)", type: "number", min: 1, step: 1 },
+    ],
+    columns: [{ key: "code", label: "Kürzel" }, { key: "name", label: "Bezeichnung" }, { key: "billing_unit", label: "Abrechnung", type: "badge" }, { key: "price_cents", label: "Preis", type: "money" }, { key: "default_duration_min", label: "Std.-Dauer (Min.)" }, { key: "active", label: "Aktiv", type: "bool" }],
+    derive: (v) => { const { price_eur, ...rest } = v; return { ...rest, price_cents: Math.round(Number(price_eur) * 100) }; },
+    actions: [
+      { label: "Deaktivieren", icon: "archive", patch: { active: false }, when: (r) => r.active === true, confirm: "Leistung deaktivieren? Bereits erfasste Leistungen bleiben unverändert." },
+      { label: "Aktivieren", icon: "play", patch: { active: true }, when: (r) => r.active === false },
+    ],
+  },
+  patient_coverages: {
+    table: "patient_coverages", title: "Kostenträger je Patient", singular: "Zuordnung", description: "Welcher Kostenträger für welchen Patienten und in welchem Zeitraum zuständig ist.",
+    writeRoles: ["org_owner", "org_admin", "pdl", "pflegefachkraft"], order: { column: "valid_from", ascending: false },
+    empty: "Noch keine Zuordnungen.",
+    fields: [
+      { name: "patient_id", label: "Patient", type: "patient", required: true },
+      { name: "payer_id", label: "Kostenträger", type: "payer", required: true },
+      { name: "insurance_number", label: "Versichertennummer", type: "text", max: 40 },
+      { name: "valid_from", label: "Gültig ab", type: "date", required: true },
+      { name: "valid_to", label: "Gültig bis", type: "date" },
+    ],
+    columns: [{ key: "patient_id", label: "Patient", type: "patient" }, { key: "payer_id", label: "Kostenträger" }, { key: "insurance_number", label: "Versichertennr." }, { key: "valid_from", label: "Ab", type: "date" }, { key: "valid_to", label: "Bis", type: "date" }],
+  },
+  prescriptions: {
+    table: "prescriptions", title: "Verordnungen", singular: "Verordnung", description: "Ärztliche Verordnungen mit Gültigkeit. Ablaufende Verordnungen werden markiert.",
+    writeRoles: CLIN_WRITE, order: { column: "valid_to", ascending: true },
+    empty: "Keine Verordnungen erfasst.",
+    fields: [
+      { name: "patient_id", label: "Patient", type: "patient", required: true },
+      { name: "kind", label: "Art", type: "select", required: true, options: o(["haeusliche_krankenpflege", "Häusliche Krankenpflege"], ["pflegeverordnung", "Pflegeverordnung"], ["hilfsmittel", "Hilfsmittel"], ["sonstige", "Sonstige"]) },
+      { name: "description", label: "Verordnete Leistung", type: "textarea", required: true, max: 1000 },
+      { name: "prescriber", label: "Verordnende Person", type: "text", max: 160 },
+      { name: "frequency", label: "Häufigkeit", type: "text", max: 200 },
+      { name: "valid_from", label: "Gültig ab", type: "date", required: true },
+      { name: "valid_to", label: "Gültig bis", type: "date" },
+    ],
+    columns: [{ key: "patient_id", label: "Patient", type: "patient" }, { key: "kind", label: "Art", type: "badge" }, { key: "description", label: "Leistung", type: "wrap" }, { key: "valid_to", label: "Gültig bis", type: "date" }, { key: "status", label: "Status", type: "badge" }],
+    actions: [{ label: "Beenden", icon: "archive", patch: { status: "beendet" }, when: (r) => r.status === "aktiv", confirm: "Verordnung als beendet markieren?" }],
   },
   shifts: {
     table: "shifts", title: "Dienstplan", singular: "Schicht", description: "Schichten der Mitarbeiter.",
