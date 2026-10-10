@@ -305,10 +305,10 @@ export const ENTITIES: Record<string, Entity> = {
       { name: "planned_end", label: "Geplantes Ende", type: "datetime", required: true },
       { name: "note", label: "Notiz", type: "textarea", max: 2000 },
     ],
-    columns: [{ key: "planned_start", label: "Geplant", type: "datetime" }, { key: "patient_id", label: "Patient", type: "patient" }, { key: "assigned_to", label: "Mitarbeiter", type: "member" }, { key: "started_at", label: "Begonnen", type: "datetime" }, { key: "ended_at", label: "Beendet", type: "datetime" }, { key: "status", label: "Status", type: "badge" }],
+    columns: [{ key: "planned_start", label: "Geplant", type: "datetime" }, { key: "patient_id", label: "Patient", type: "patient" }, { key: "assigned_to", label: "Mitarbeiter", type: "member" }, { key: "started_at", label: "Begonnen", type: "datetime" }, { key: "ended_at", label: "Beendet", type: "datetime" }, { key: "dauer", label: "Dauer" }, { key: "status", label: "Status", type: "badge" }],
     actions: [
-      { label: "Beginnen", icon: "play", patch: { status: "begonnen", started_at: "$now" }, when: (r) => r.status === "geplant" },
-      { label: "Abschließen", icon: "check", patch: { status: "abgeschlossen", ended_at: "$now" }, when: (r) => r.status === "begonnen" },
+      { label: "Start", icon: "play", patch: { status: "begonnen", started_at: "$now" }, when: (r) => r.status === "geplant" },
+      { label: "Stopp", icon: "check", patch: { status: "abgeschlossen", ended_at: "$now" }, when: (r) => r.status === "begonnen" },
       { label: "Ausgefallen", icon: "x", patch: { status: "ausgefallen" }, when: (r) => r.status === "geplant", confirm: "Besuch als ausgefallen markieren?" },
     ],
   },
